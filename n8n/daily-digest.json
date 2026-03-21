@@ -1,0 +1,78 @@
+{
+  "name": "CalorAI Daily Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "id": "schedule-node",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:3000/api/metrics"
+      },
+      "id": "metrics-node",
+      "name": "Fetch Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const overview = $json.overview;\nreturn [{ json: { text: `CalorAI Daily Digest\\nUsers: ${overview.totalUsers}\\nMeals logged: ${overview.mealsLogged}\\nActivation: ${Math.round(overview.activationRate * 100)}%` } }];"
+      },
+      "id": "format-node",
+      "name": "Format Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Metrics": {
+      "main": [
+        [
+          {
+            "node": "Format Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "calor-digest-v1"
+}

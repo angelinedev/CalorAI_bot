@@ -1,0 +1,26 @@
+{
+  "name": "calor-ai-assignment",
+  "version": "1.0.0",
+  "description": "Telegram health chatbot with A/B testing, event logging, analytics dashboard, and n8n workflow exports.",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node test/app.test.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "keywords": [
+    "telegram",
+    "chatbot",
+    "ab-testing",
+    "health",
+    "n8n",
+    "statsig"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "statsig-node": "^6.5.1",
+    "telegraf": "^4.16.3"
+  }
+}

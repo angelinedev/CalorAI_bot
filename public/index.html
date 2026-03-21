@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>CalorAI Control Room</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">CalorAI Assignment Build</p>
+          <h1>Telegram health coaching with live A/B telemetry.</h1>
+          <p class="lede">
+            A full-stack submission workspace with chatbot simulation, meal CRUD, evaluation metrics,
+            and real-time analytics.
+          </p>
+        </div>
+        <div class="hero-card">
+          <span>Mode</span>
+          <strong>Submission-ready local stack</strong>
+          <p>Works without external services, then upgrades cleanly to Telegram, Statsig, and n8n.</p>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel stats-panel">
+          <div class="panel-head">
+            <h2>Overview</h2>
+            <button id="refresh-metrics" class="ghost">Refresh</button>
+          </div>
+          <div id="overview-cards" class="metric-grid"></div>
+        </section>
+
+        <section class="panel chart-panel">
+          <div class="panel-head">
+            <h2>A/B Experiment</h2>
+            <span id="experiment-name" class="chip">Loading</span>
+          </div>
+          <div id="variant-bars" class="variant-bars"></div>
+        </section>
+
+        <section class="panel chat-panel">
+          <div class="panel-head">
+            <h2>Chat Sandbox</h2>
+            <span class="chip">Dashboard simulator</span>
+          </div>
+          <label class="field">
+            <span>User ID</span>
+            <input id="chat-user-id" value="demo-user" />
+          </label>
+          <div id="chat-log" class="chat-log"></div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" placeholder="Try: log oats bowl | 320 | 14 | 48 | 8" />
+            <button type="submit">Send</button>
+          </form>
+          <div class="quick-actions">
+            <button data-prompt="/start">Start</button>
+            <button data-prompt="/summary">Summary</button>
+            <button data-prompt="log chicken salad | 410 | 35 | 20 | 18">Sample meal</button>
+          </div>
+        </section>
+
+        <section class="panel meals-panel">
+          <div class="panel-head">
+            <h2>Meal Log</h2>
+            <button id="load-meals" class="ghost">Reload</button>
+          </div>
+          <form id="meal-form" class="meal-form">
+            <input name="name" placeholder="Meal name" required />
+            <input name="calories" type="number" placeholder="Calories" required />
+            <input name="protein" type="number" placeholder="Protein" value="0" />
+            <input name="carbs" type="number" placeholder="Carbs" value="0" />
+            <input name="fats" type="number" placeholder="Fats" value="0" />
+            <button type="submit">Add meal</button>
+          </form>
+          <div id="meal-list" class="meal-list"></div>
+        </section>
+
+        <section class="panel eval-panel">
+          <div class="panel-head">
+            <h2>Evaluation Framework</h2>
+            <span class="chip">North-star + guardrails</span>
+          </div>
+          <div id="evaluation-framework" class="stack"></div>
+        </section>
+
+        <section class="panel events-panel">
+          <div class="panel-head">
+            <h2>Live Event Stream</h2>
+            <span class="chip live">SSE</span>
+          </div>
+          <div id="event-stream" class="event-stream"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
