@@ -19,6 +19,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@statsig/statsig-node-core": "^0.17.0",
     "dotenv": "^17.3.1",
     "statsig-node": "^6.5.1",
     "telegraf": "^4.16.3"

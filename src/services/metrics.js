@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export class MetricsService {
-  constructor({ dataDir, experimentService }) {
+  constructor({ dataDir, experimentService, database }) {
     this.filePath = path.join(dataDir, 'events.jsonl');
     this.experimentService = experimentService;
+    this.database = database;
   }
 
   async readEvents() {
@@ -51,6 +52,36 @@ export class MetricsService {
         variants: variantBreakdown
       },
       recentEvents: events.slice(-30).reverse()
+    };
+  }
+
+  async getRecentEvents({ limit = 30, userId = null } = {}) {
+    const events = await this.readEvents();
+    const filtered = userId ? events.filter((event) => String(event.userId) === String(userId)) : events;
+    return filtered.slice(-Number(limit)).reverse();
+  }
+
+  async getUserInsights(userId) {
+    const events = (await this.readEvents()).filter((event) => String(event.userId) === String(userId));
+    const eventCount = events.length;
+
+    return {
+      totalEvents: eventCount,
+      mealsLogged: events.filter((event) => event.type === 'meal_logged').length,
+      mealsEdited: events.filter((event) => event.type === 'meal_edited').length,
+      mealsDeleted: events.filter((event) => event.type === 'meal_deleted').length,
+      summariesViewed: events.filter((event) => event.type === 'summary_viewed').length,
+      lastEventAt: events.length ? events[events.length - 1].ts : null,
+      recentEvents: events.slice(-12).reverse()
+    };
+  }
+
+  async getAdminDashboard() {
+    const baseMetrics = await this.getDashboardMetrics();
+    return {
+      ...baseMetrics,
+      adminOverview: this.database.getAdminOverview(),
+      users: this.database.listUsersWithStats()
     };
   }
 

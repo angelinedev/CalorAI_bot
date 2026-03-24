@@ -5,38 +5,21 @@ function isoDate(input = new Date()) {
 }
 
 export class MealService {
-  constructor({ mealsStore, profilesStore, eventLogger }) {
-    this.mealsStore = mealsStore;
-    this.profilesStore = profilesStore;
+  constructor({ database, eventLogger, statsigAdapter, n8nRelay }) {
+    this.database = database;
     this.eventLogger = eventLogger;
-  }
-
-  async ensureProfile(userId) {
-    const profiles = await this.profilesStore.read();
-    if (!profiles[userId]) {
-      profiles[userId] = {
-        userId,
-        createdAt: new Date().toISOString(),
-        timezone: 'Asia/Calcutta'
-      };
-      await this.profilesStore.write(profiles);
-    }
-    return profiles[userId];
+    this.statsigAdapter = statsigAdapter;
+    this.n8nRelay = n8nRelay;
   }
 
   async listMeals(userId, date = isoDate()) {
-    const meals = await this.mealsStore.read();
-    return meals
-      .filter((meal) => meal.userId === userId && meal.loggedAt.slice(0, 10) === date)
-      .sort((a, b) => a.loggedAt.localeCompare(b.loggedAt));
+    return this.database.listMeals(userId, date);
   }
 
   async createMeal(userId, input) {
-    await this.ensureProfile(userId);
-
-    const meal = {
+    const meal = this.database.createMeal({
       id: crypto.randomUUID().slice(0, 8),
-      userId,
+      userId: String(userId),
       name: input.name,
       calories: Number(input.calories || 0),
       protein: Number(input.protein || 0),
@@ -45,102 +28,102 @@ export class MealService {
       notes: input.notes || '',
       loggedAt: input.loggedAt || new Date().toISOString(),
       source: input.source || 'manual'
-    };
+    });
 
-    await this.mealsStore.update((current) => [...current, meal]);
     await this.eventLogger.log({
       type: 'meal_logged',
-      userId,
+      userId: String(userId),
       mealId: meal.id,
       calories: meal.calories,
       source: meal.source
     });
+    await this.statsigAdapter?.logEvent({
+      userId,
+      eventName: 'meal_logged',
+      metadata: {
+        meal_id: meal.id,
+        meal_name: meal.name,
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fats: meal.fats,
+        source: meal.source
+      }
+    });
+    await this.n8nRelay?.mealLogged(meal);
     return meal;
   }
 
   async updateMeal(userId, mealId, patch) {
-    let updatedMeal = null;
-
-    await this.mealsStore.update((current) =>
-      current.map((meal) => {
-        if (meal.userId !== userId || meal.id !== mealId) {
-          return meal;
-        }
-
-        updatedMeal = {
-          ...meal,
-          ...patch,
-          calories: patch.calories !== undefined ? Number(patch.calories) : meal.calories,
-          protein: patch.protein !== undefined ? Number(patch.protein) : meal.protein,
-          carbs: patch.carbs !== undefined ? Number(patch.carbs) : meal.carbs,
-          fats: patch.fats !== undefined ? Number(patch.fats) : meal.fats
-        };
-        return updatedMeal;
-      })
-    );
-
+    const updatedMeal = this.database.updateMeal(userId, mealId, patch);
     if (!updatedMeal) {
       return null;
     }
 
     await this.eventLogger.log({
       type: 'meal_edited',
-      userId,
+      userId: String(userId),
       mealId,
       fields: Object.keys(patch)
     });
+    await this.statsigAdapter?.logEvent({
+      userId,
+      eventName: 'meal_edited',
+      metadata: {
+        meal_id: mealId,
+        fields: Object.keys(patch).join(',')
+      }
+    });
+    await this.n8nRelay?.mealEdited(updatedMeal, Object.keys(patch));
     return updatedMeal;
   }
 
   async deleteMeal(userId, mealId) {
-    let deleted = null;
-
-    await this.mealsStore.update((current) =>
-      current.filter((meal) => {
-        const shouldDelete = meal.userId === userId && meal.id === mealId;
-        if (shouldDelete) {
-          deleted = meal;
-        }
-        return !shouldDelete;
-      })
-    );
-
+    const deleted = this.database.deleteMeal(userId, mealId);
     if (!deleted) {
       return null;
     }
 
     await this.eventLogger.log({
       type: 'meal_deleted',
-      userId,
+      userId: String(userId),
       mealId
     });
+    await this.statsigAdapter?.logEvent({
+      userId,
+      eventName: 'meal_deleted',
+      metadata: {
+        meal_id: mealId
+      }
+    });
+    await this.n8nRelay?.mealDeleted(deleted);
     return deleted;
   }
 
   async getDailySummary(userId, date = isoDate()) {
-    const meals = await this.listMeals(userId, date);
-    const totals = meals.reduce(
-      (acc, meal) => {
-        acc.calories += meal.calories;
-        acc.protein += meal.protein;
-        acc.carbs += meal.carbs;
-        acc.fats += meal.fats;
-        return acc;
-      },
-      { calories: 0, protein: 0, carbs: 0, fats: 0 }
-    );
+    const summary = this.database.getDailySummary(userId, date);
 
     await this.eventLogger.log({
       type: 'summary_viewed',
-      userId,
+      userId: String(userId),
       date,
-      mealCount: meals.length
+      mealCount: summary.meals.length
     });
+    await this.statsigAdapter?.logEvent({
+      userId,
+      eventName: 'summary_viewed',
+      metadata: {
+        date,
+        meal_count: summary.meals.length,
+        calories: summary.totals.calories
+      }
+    });
+    await this.n8nRelay?.summaryViewed(userId, summary);
 
-    return {
-      date,
-      totals,
-      meals
-    };
+    return summary;
+  }
+
+  async getUserTrend(userId, days = 7) {
+    return this.database.getMealTrend(userId, days);
   }
 }

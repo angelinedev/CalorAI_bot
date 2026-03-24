@@ -42,7 +42,7 @@ export function loadEnv(rootDir) {
 
     const parsed = parseEnvFile(readFileSync(filePath, 'utf8'));
     for (const [key, value] of Object.entries(parsed)) {
-      if (!process.env[key]) {
+      if (process.env[key] === undefined) {
         process.env[key] = value;
       }
     }
