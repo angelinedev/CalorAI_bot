@@ -13,19 +13,21 @@ const MIME_TYPES = {
   '.webmanifest': 'application/manifest+json; charset=utf-8'
 };
 
-export function sendJson(res, statusCode, payload) {
+export function sendJson(res, statusCode, payload, headers = {}) {
   const body = JSON.stringify(payload, null, 2);
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Content-Length': Buffer.byteLength(body)
+    'Content-Length': Buffer.byteLength(body),
+    ...headers
   });
   res.end(body);
 }
 
-export function sendText(res, statusCode, text) {
+export function sendText(res, statusCode, text, headers = {}) {
   res.writeHead(statusCode, {
     'Content-Type': 'text/plain; charset=utf-8',
-    'Content-Length': Buffer.byteLength(text)
+    'Content-Length': Buffer.byteLength(text),
+    ...headers
   });
   res.end(text);
 }

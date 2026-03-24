@@ -1,14 +1,16 @@
 # CalorAI Assignment Submission
 
-CalorAI is a full-stack assignment project for a Telegram-first health chatbot with A/B testing, event logging, analytics, and workflow automation artifacts.
+CalorAI is a full-stack assignment project for a Telegram-first health chatbot with A/B testing, event logging, analytics, workflow automation artifacts, and a login-based admin/user portal.
 
 ## What is included
 
 - Telegram webhook backend with health bot flows
 - Meal logging, editing, deletion, and daily summary APIs
+- SQLite-backed portal accounts, sessions, and persistent meal history
 - A/B testing with a deterministic local allocator and optional Statsig adapter
 - Event logging to JSONL plus live dashboard metrics
-- Real-time dashboard with chat simulator and meal operations
+- Admin control room for user provisioning, product telemetry, and setup visibility
+- Personal user dashboard for meal tracking, analysis, targets, and coach chat
 - PWA support for mobile-friendly access
 - n8n workflow exports for relay and digest orchestration
 - Test and smoke-check scripts
@@ -17,7 +19,7 @@ CalorAI is a full-stack assignment project for a Telegram-first health chatbot w
 
 - Backend: Node.js HTTP server with built-in `fetch`
 - Frontend: static HTML, CSS, and vanilla JS
-- Data layer: JSON + JSONL files for frictionless local setup
+- Data layer: SQLite for users/meals/sessions plus JSONL events for telemetry
 - Experimentation: local hash allocation, upgradeable to Statsig
 - Automation: n8n workflow exports
 
@@ -30,6 +32,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+- Admin view: [http://localhost:3000/admin](http://localhost:3000/admin)
+- User portal: [http://localhost:3000/portal](http://localhost:3000/portal)
+
 `npm install` does not pull any runtime dependencies right now, but it creates a standard project flow for reviewers.
 
 ## Environment variables
@@ -40,24 +45,57 @@ For convenience in this assignment repo, if `.env` is missing the app will also 
 
 - `PORT`: server port
 - `APP_BASE_URL`: public base URL
+- `DATA_DIR`: base data directory for events and default SQLite storage
+- `DATABASE_PATH`: override the SQLite file location if needed
 - `TELEGRAM_BOT_TOKEN`: enables outbound Telegram replies
 - `TELEGRAM_WEBHOOK_SECRET`: validates Telegram webhook requests
 - `STATSIG_SERVER_KEY`: enables the Statsig adapter if `@statsig/statsig-node-core` is installed
 - `DEFAULT_EXPERIMENT`: experiment name used in logging and allocation
+- `GEMINI_API_KEY`: enables free-text meal parsing and calorie estimation
+- `GEMINI_MODEL`: Gemini model id, defaults to `gemini-2.5-flash`
+- `N8N_WEBHOOK_URL`: optional POST webhook for meal and summary automation events
+- `ADMIN_USERNAME`: seeded admin login for the portal
+- `ADMIN_PASSWORD`: seeded admin password for the portal
+
+Default local admin credentials from `.env.example`:
+
+- Username: `admin`
+- Password: `caloradmin123`
 
 ## Main routes
 
 - `GET /api/health`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/session`
 - `POST /api/chat`
 - `POST /api/telegram/webhook`
+- `GET /api/me/dashboard`
+- `GET /api/me/analysis`
+- `PATCH /api/me/profile`
+- `POST /api/me/password`
+- `GET /api/me/meals`
+- `POST /api/me/meals`
 - `GET /api/users/:userId/meals`
 - `POST /api/users/:userId/meals`
 - `PATCH /api/users/:userId/meals/:mealId`
 - `DELETE /api/users/:userId/meals/:mealId`
 - `GET /api/users/:userId/summary`
+- `GET /api/admin/dashboard`
+- `GET /api/admin/users`
+- `POST /api/admin/users`
+- `GET /api/admin/users/:userId/dashboard`
+- `POST /api/admin/users/:userId/reset-password`
 - `GET /api/metrics`
 - `GET /api/evaluation-framework`
 - `GET /api/stream`
+
+## Portal flow
+
+1. Admin signs in at `/admin`.
+2. Admin creates a portal user or resets credentials for an existing Telegram user.
+3. The user signs in at `/portal` to see personal meals, targets, daily analysis, and coach chat.
+4. Telegram users can also send `/portal` to receive a username/password pair for the same portal.
 
 ## Telegram flow
 
@@ -70,11 +108,13 @@ For convenience in this assignment repo, if `.env` is missing the app will also 
 
 The project works offline with deterministic local assignment. For production-style evaluation:
 
-1. Install `@statsig/statsig-node-core`
-2. Set `STATSIG_SERVER_KEY`
-3. Create an experiment whose config returns a `variant` value of `A` or `B`
+1. Set `STATSIG_SERVER_KEY` in `.env`
+2. Create an experiment named `coach_tone_v1` or change `DEFAULT_EXPERIMENT` to match your Statsig experiment name
+3. Make sure that experiment returns a string config value named `variant`
+4. Set that `variant` value to either `A` or `B`
+5. Restart the app and open `/api/setup/statsig` to verify the SDK and assignment path
 
-The adapter lives in `src/services/statsig-adapter.js`.
+This repo now supports either the modern `@statsig/statsig-node-core` SDK or the legacy `statsig-node` SDK. The adapter lives in `src/services/statsig-adapter.js`.
 
 ## Evaluation framework
 

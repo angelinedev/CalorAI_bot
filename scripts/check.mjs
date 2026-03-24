@@ -6,6 +6,9 @@ import { mkdtemp } from 'node:fs/promises';
 process.env.DATA_DIR = await mkdtemp(path.join(os.tmpdir(), 'calor-check-'));
 process.env.APP_BASE_URL = 'http://127.0.0.1';
 process.env.DEFAULT_EXPERIMENT = 'coach_tone_v1';
+process.env.STATSIG_SERVER_KEY = '';
+process.env.GEMINI_API_KEY = '';
+process.env.N8N_WEBHOOK_URL = '';
 
 const { createApp } = await import('../src/app.js');
 
